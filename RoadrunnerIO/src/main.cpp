@@ -322,5 +322,5 @@ void loop() {
     sendTelemetry();
     lastTelem = millis();
   }
-  delay(10);
+  delay(20);
 }
