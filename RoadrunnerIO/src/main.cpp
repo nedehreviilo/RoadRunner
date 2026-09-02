@@ -1,3 +1,4 @@
+// RoadrunnerIO/src/main.cpp is copied from Mirza
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_now.h>
@@ -10,10 +11,10 @@
 // =========================================================================
 
 // Wi-Fi access point
-const char* AP_SSID     = "RC-Car-XX";          // Change name to something unique
+/* const char* AP_SSID     = "RC-Car-XX";          // Change name to something unique
 const char* AP_PASSWORD = "maskinelement";
 const int   AP_CHANNEL  = 1;                    // ESP-NOW will inherit this channel
-
+ */
 // Motor + servo pins (see the Electronics and Wiring page)
 const int RPWM_PIN      = 16;
 const int LPWM_PIN      = 17;
@@ -125,7 +126,7 @@ void servoSetup() {
   int centerUs = (SERVO_MIN_US + SERVO_MAX_US) / 2;
   ledcWrite(SERVO_CHANNEL, usToServoDuty(centerUs));
 }
-
+/* 
 void applyControl(const ControlData& cmd) {
   // Throttle: split sign across RPWM and LPWM
   int t = constrain(cmd.throttle, -255, 255);
@@ -141,11 +142,11 @@ void applyControl(const ControlData& cmd) {
                SERVO_MIN_US, SERVO_MAX_US);
   ledcWrite(SERVO_CHANNEL, usToServoDuty(us));
 }
-
+ */
 // =========================================================================
 // Command-source arbitration: joystick > web > failsafe
 // =========================================================================
-
+/* 
 void selectActiveCommand() {
   unsigned long now = millis();
   if (now - lastEspNowMs < ESPNOW_PRIO_MS) {
@@ -162,11 +163,11 @@ void selectActiveCommand() {
   }
   applyControl(activeCmd);
 }
-
+ */
 // =========================================================================
 // ESP-NOW receive callback: fires whenever a packet from the XIAO arrives
 // =========================================================================
-
+/* 
 void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
   if (len != sizeof(ControlData)) return;       // ignore unexpected lengths
   memcpy(&espnowCmd, data, sizeof(espnowCmd));
@@ -180,13 +181,13 @@ void espNowSetup() {
   }
   esp_now_register_recv_cb(onEspNowReceive);
 }
-
+ */
 // =========================================================================
 // WebSocket: short text frames from the phone:
 //   "steering,throttle"     = joystick state (-255 .. +255 each)
 //   "en1" / "en0"           = motors-enabled toggle
 // =========================================================================
-
+/* 
 void parseWebMessage(uint8_t* data, size_t len) {
   data[len] = 0;                                // null-terminate so String works
   String msg = (char*)data;
@@ -208,11 +209,11 @@ void onWebSocketEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
                       AwsEventType type, void* arg, uint8_t* data, size_t len) {
   if (type == WS_EVT_DATA) parseWebMessage(data, len);
 }
-
+ */
 // =========================================================================
 // HTTP: serve the embedded controller page from PROGMEM
 // =========================================================================
-
+/* 
 void httpSetup() {
   ws.onEvent(onWebSocketEvent);
   server.addHandler(&ws);
@@ -221,7 +222,7 @@ void httpSetup() {
   });
   server.begin();
 }
-
+ */
 // =========================================================================
 // Motor RPM, vehicle speed, BTS7960 current: stubs for now
 // =========================================================================
@@ -256,7 +257,7 @@ float readCurrent(int pin) {
 // =========================================================================
 // Telemetry: pushed to all connected web clients every 500 ms
 // =========================================================================
-
+/* 
 void sendTelemetry() {
   long batt3s_mv = readBatteryMillivolts();
   long batt1s_mv = espnowCmd.batt_mv;            // sent by the XIAO transmitter
@@ -281,11 +282,11 @@ void sendTelemetry() {
 
   if (low3s) Serial.println("!! LOW 3S BATTERY (< 9.6 V) !!");
 }
-
+ */
 // =========================================================================
 // Wi-Fi AP: must come up BEFORE espNowSetup() so they share a channel
 // =========================================================================
-
+/* 
 void wifiSetup() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(AP_SSID, AP_PASSWORD, AP_CHANNEL);
@@ -293,7 +294,7 @@ void wifiSetup() {
   Serial.print("AP IP: ");      Serial.println(WiFi.softAPIP());
   Serial.printf("Channel: %d\n", AP_CHANNEL);
 }
-
+ */
 // =========================================================================
 // Arduino entry points
 // =========================================================================
