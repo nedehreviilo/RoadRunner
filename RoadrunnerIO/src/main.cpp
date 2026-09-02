@@ -16,32 +16,33 @@ const char* AP_PASSWORD = "maskinelement";
 const int   AP_CHANNEL  = 1;                    // ESP-NOW will inherit this channel
  */
 // Motor + servo pins (see the Electronics and Wiring page)
-const int RPWM_PIN      = 16;
-const int LPWM_PIN      = 17;
-const int SERVO_PIN     = 13;
-const int MOTOR_EN_PIN  = 19;                   // R_EN + L_EN tied together to this GPIO (NOT 12, strapping pin)
-const int BATT_PIN      = 34;                   // 3S divider midpoint, ADC1, input-only
+const int RPWM_PIN      = 16;                      //Bestämmer om motordrivaren ska köra framåt eller bakåt
+const int LPWM_PIN      = 17;                     
+const int SERVO_PIN     = 13;                    // Bestämmer servo läget
+const int MOTOR_EN_PIN  = 19;                   // R_EN + L_EN tied together to this GPIO (NOT 12, strapping pin) "Gör så att bilen inte kör iväg av sigsjälvt när den startar"
+const int BATT_PIN      = 34;                   // 3S divider midpoint, ADC1, input-only "Batteriövervakning"
 
+//Extra ej nödvändigt avsnitt för att läsa av strömmen(Ampere) i bilen
 // Optional BTS7960 current sense: set to -1 to disable until you wire R_IS / L_IS.
 // When wired, each pin outputs ~ I_motor / 8500 amps to GND through a sense resistor.
 const int R_IS_PIN      = -1;                   // e.g. 32 once wired
 const int L_IS_PIN      = -1;                   // e.g. 33 once wired
 
 // LEDC channels: keep distinct from the ESP32Servo library (channels 0–3)
-const int RPWM_CHANNEL  = 4;
+const int RPWM_CHANNEL  = 4;                      //Olika kanaler? i espn som gör saker automatiskt
 const int LPWM_CHANNEL  = 5;
 const int SERVO_CHANNEL = 0;
-const int MOTOR_FREQ    = 20000;                // 20 kHz, above audible
-const int MOTOR_RES     = 8;                    // 0..255 duty
-const int SERVO_FREQ    = 50;
-const int SERVO_RES     = 16;                   // 65 536 ticks per 20 ms
+const int MOTOR_FREQ    = 20000;                // 20 kHz, above audible "Så man ej hör ett tjutande ljud när man gasar", slår av och på 20 0000 gånger/minuten
+const int MOTOR_RES     = 8;                    // 0..255 duty "Styr motorn med 255 steg"
+const int SERVO_FREQ    = 50;                   // Servons takt 
+const int SERVO_RES     = 16;                   // 65 536 ticks per 20 ms "Detta ger mjuk styrning"
 
 // Servo calibration: replace with YOUR measured end stops
 // Default values should be safe
-const int SERVO_MIN_US = 500;
-const int SERVO_MAX_US = 2480;
+const int SERVO_MIN_US = 500;       //Det kortaste kommandot du kan skicka. Betyder oftast "sväng ratten max åt vänster".
+const int SERVO_MAX_US = 2480;      //Det längsta kommandot du kan skicka. Betyder oftast "sväng ratten max åt höger".
 
-// 3S battery calibration: replace with YOUR two-point readings
+// "Omvandlar ADC-värden till spänning" 3S battery calibration: replace with YOUR two-point readings
 const long ADC_AT_9V   = 1880;                  // raw ADC at 9.0 V
 const long ADC_AT_12V6 = 2630;                  // raw ADC at 12.6 V
 const long LOW_BATTERY_WARN_mV = 9600;          // 3S cutoff (~3.2 V/cell)
@@ -50,14 +51,14 @@ const long LOW_BATTERY_WARN_mV = 9600;          // 3S cutoff (~3.2 V/cell)
 const float WHEEL_DIAM_M  = 0.080f;             // wheel diameter in meters, measure yours
 const float GEAR_RATIO    = 1.0f;               // motor turns per wheel turn (1.0 = direct drive)
 
-// Command-source arbitration windows
+// Command-source arbitration windows "Säkerhet om bortkoppling sker och om esp och mobil kopplas samtidigt"
 const unsigned long ESPNOW_PRIO_MS = 200;       // joystick wins if last packet < 200 ms ago
 const unsigned long FAILSAFE_MS    = 500;       // both stale > 500 ms → motor off
 
 // =========================================================================
 // State: written by callbacks, read by loop()
 // =========================================================================
-
+//Skapar minneslådor(hanterar kommandon från ESP-NOW och WebSocket) och startar upp webbläsaren
 typedef struct {
   int16_t steering;   // -255 .. +255
   int16_t throttle;   // -255 .. +255
@@ -79,7 +80,7 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
 // =========================================================================
-// Battery monitor: two-point linear interpolation
+// Battery monitor: two-point linear interpolation "Läser av batteriet och ger ett värde på spänningen"
 // =========================================================================
 
 long readBatteryMillivolts() {
@@ -94,10 +95,10 @@ long readBatteryMillivolts() {
 // =========================================================================
 
 uint32_t usToServoDuty(int us) {
-  return (uint32_t)((uint64_t)us * 65536ULL * SERVO_FREQ / 1000000ULL);
+  return (uint32_t)((uint64_t)us * 65536ULL * SERVO_FREQ / 1000000ULL);  //servon styrs av olika pulser: korta/långa
 }
 
-void stopMotor() {
+void stopMotor() {                      //Nödstop som sätter PMW värdet till 0
   ledcWrite(RPWM_CHANNEL, 0);
   ledcWrite(LPWM_CHANNEL, 0);
 }
@@ -114,13 +115,13 @@ void motorSetup() {
   ledcWrite(LPWM_CHANNEL, 0);
 }
 
-void setMotorEnable(bool on) {
+void setMotorEnable(bool on) {                           // start och stopp
   motorsEnabled = on;
   digitalWrite(MOTOR_EN_PIN, on ? HIGH : LOW);  // BTS7960 R_EN + L_EN
-  if (!on) stopMotor();                         // belt-and-braces: also kill PWM
+  if (!on) stopMotor();                         // belt-and-braces: also kill PWM 
 }
 
-void servoSetup() {
+void servoSetup() {                                   //Gör så servon ställer sig rakt fram vid start av bilen och hittar utgångsposistion
   ledcSetup(SERVO_CHANNEL, SERVO_FREQ, SERVO_RES);
   ledcAttachPin(SERVO_PIN, SERVO_CHANNEL);
   int centerUs = (SERVO_MIN_US + SERVO_MAX_US) / 2;
