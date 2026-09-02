@@ -4,6 +4,7 @@ const char CONTROLLER_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>RC Car Controller</title>
   <style>
@@ -87,12 +88,23 @@ const char CONTROLLER_HTML[] PROGMEM = R"rawliteral(
     let throttle = 0;     // -255 .. +255
     let enabled  = false;
 
+    // Looked up once. sendStick() runs 50x a second, so re-running
+    // getElementById in it is wasted work on a phone.
+    const el = {};
+    function cacheElements() {
+      ['steerVal','throtVal','enableBtn','batt3s','batt1s',
+       'rpm','speed','curR','curL','src'].forEach(id => {
+        el[id] = document.getElementById(id);
+      });
+    }
+
     function sendStick() {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(steering + ',' + throttle);
       }
-      document.getElementById('steerVal').textContent = steering;
-      document.getElementById('throtVal').textContent = throttle;
+      if (!el.steerVal) return;                 // not loaded yet
+      el.steerVal.textContent = steering;
+      el.throtVal.textContent = throttle;
     }
 
     function sendEnable(state) {
@@ -102,33 +114,44 @@ const char CONTROLLER_HTML[] PROGMEM = R"rawliteral(
     }
 
     function updateEnableButton() {
-      const btn = document.getElementById('enableBtn');
+      const btn = el.enableBtn;
+      if (!btn) return;
       btn.textContent = enabled ? 'Motors enabled' : 'Motors disabled';
       btn.classList.toggle('active', enabled);
     }
 
     function initWebSocket() {
       ws = new WebSocket('ws://' + location.host + '/ws');
-      ws.onclose   = () => setTimeout(initWebSocket, 1000); // auto-reconnect
-      ws.onopen    = () => sendEnable(enabled);             // re-sync enable on reconnect
+      ws.onclose = () => setTimeout(initWebSocket, 1000);  // auto-reconnect
+      // Do NOT push our old `enabled` back to the car here. If the ESP32
+      // browned out and rebooted, it comes up disarmed on purpose; re-sending
+      // en1 on reconnect would silently re-arm the motors with nobody
+      // touching the phone. The car is the authority -- we follow its
+      // telemetry below instead.
+      ws.onopen = () => { enabled = false; updateEnableButton(); };
       ws.onmessage = (evt) => {
-        const t = JSON.parse(evt.data);
-        const b3 = document.getElementById('batt3s');
-        b3.textContent = t.batt3s_v.toFixed(2) + ' V';
-        b3.className   = 'val ' + (t.batt_low ? 'low' : '');
+        let t;
+        try { t = JSON.parse(evt.data); } catch (e) { return; }  // ignore a torn frame
 
-        const b1 = document.getElementById('batt1s');
-        b1.textContent = (t.batt1s_v > 0.1) ? t.batt1s_v.toFixed(2) + ' V' : '--';
+        el.batt3s.textContent = t.batt3s_v.toFixed(2) + ' V';
+        el.batt3s.className   = t.batt_low ? 'val low' : 'val';
 
-        document.getElementById('rpm').textContent   = t.motor_rpm;
-        document.getElementById('speed').textContent = t.speed_kmh.toFixed(1);
-        document.getElementById('curR').textContent  = t.current_r.toFixed(2);
-        document.getElementById('curL').textContent  = t.current_l.toFixed(2);
+        el.batt1s.textContent = (t.batt1s_v > 0.1) ? t.batt1s_v.toFixed(2) + ' V' : '--';
 
-        const srcEl  = document.getElementById('src');
+        el.rpm.textContent   = t.motor_rpm;
+        el.speed.textContent = t.speed_kmh.toFixed(1);
+        el.curR.textContent  = t.current_r.toFixed(2);
+        el.curL.textContent  = t.current_l.toFixed(2);
+
         const source = t.enabled ? t.source : 'disabled';
-        srcEl.textContent = source;
-        srcEl.className   = 'src val ' + source;
+        el.src.textContent = source;
+        el.src.className   = 'src val ' + source;
+
+        // Keep the button honest about what the car is actually doing.
+        if (typeof t.enabled === 'boolean' && t.enabled !== enabled) {
+          enabled = t.enabled;
+          updateEnableButton();
+        }
       };
     }
 
@@ -161,7 +184,7 @@ const char CONTROLLER_HTML[] PROGMEM = R"rawliteral(
     }
 
     function initEnableButton() {
-      document.getElementById('enableBtn').addEventListener('click', () => {
+      el.enableBtn.addEventListener('click', () => {
         enabled = !enabled;
         updateEnableButton();
         sendEnable(enabled);
@@ -173,6 +196,7 @@ const char CONTROLLER_HTML[] PROGMEM = R"rawliteral(
     setInterval(sendStick, 20);
 
     window.addEventListener('load', () => {
+      cacheElements();
       initWebSocket();
       initJoysticks();
       initEnableButton();
