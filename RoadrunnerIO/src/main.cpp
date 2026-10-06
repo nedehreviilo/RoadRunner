@@ -46,7 +46,7 @@ const long ADC_AT_12V6 = 2630;                  // raw ADC at 12.6 V
 const long LOW_BATTERY_WARN_mV = 9600;          // 3S cutoff (~3.2 V/cell)
 
 // Drivetrain: used to convert motor RPM into vehicle km/h
-const float WHEEL_DIAM_M  = 0.080f;             // wheel diameter in meters, measure yours
+const float WHEEL_DIAM_M  = 0.100f;             // wheel diameter in meters, measure yours
 const float GEAR_RATIO    = 1.0f;               // motor turns per wheel turn (1.0 = direct drive)
 
 // Command-source arbitration windows
@@ -105,10 +105,10 @@ void motorSetup() {
   pinMode(MOTOR_EN_PIN, OUTPUT);
   digitalWrite(MOTOR_EN_PIN, LOW);              // motors hardware-disabled at boot
 
-  ledcSetup(RPWM_CHANNEL, MOTOR_FREQ, MOTOR_RES);
-  ledcSetup(LPWM_CHANNEL, MOTOR_FREQ, MOTOR_RES);
-  ledcAttachPin(RPWM_PIN, RPWM_CHANNEL);
-  ledcAttachPin(LPWM_PIN, LPWM_CHANNEL);
+  ledcAttach(RPWM_PIN, MOTOR_FREQ, MOTOR_RES);
+  ledcAttach(LPWM_PIN, MOTOR_FREQ, MOTOR_RES);
+ledcAttach(RPWM_PIN, MOTOR_FREQ, MOTOR_RES);
+ledcAttach(LPWM_PIN, MOTOR_FREQ, MOTOR_RES);
   ledcWrite(RPWM_CHANNEL, 0);
   ledcWrite(LPWM_CHANNEL, 0);
 }
@@ -120,8 +120,7 @@ void setMotorEnable(bool on) {
 }
 
 void servoSetup() {
-  ledcSetup(SERVO_CHANNEL, SERVO_FREQ, SERVO_RES);
-  ledcAttachPin(SERVO_PIN, SERVO_CHANNEL);
+  ledcAttach(SERVO_PIN, SERVO_FREQ, SERVO_RES);
   int centerUs = (SERVO_MIN_US + SERVO_MAX_US) / 2;
   ledcWrite(SERVO_CHANNEL, usToServoDuty(centerUs));
 }
@@ -167,9 +166,9 @@ void selectActiveCommand() {
 // ESP-NOW receive callback: fires whenever a packet from the XIAO arrives
 // =========================================================================
 
-void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
+void onEspNowReceive(const esp_now_recv_info *info, const uint8_t *incomingData, int len) {
   if (len != sizeof(ControlData)) return;       // ignore unexpected lengths
-  memcpy(&espnowCmd, data, sizeof(espnowCmd));
+  memcpy(&espnowCmd, incomingData, sizeof(espnowCmd));
   lastEspNowMs = millis();
 }
 
@@ -217,8 +216,7 @@ void httpSetup() {
   ws.onEvent(onWebSocketEvent);
   server.addHandler(&ws);
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* req) {
-    req->send_P(200, "text/html", CONTROLLER_HTML);
-  });
+  req->send(200, "text/html", CONTROLLER_HTML);  });
   server.begin();
 }
 
