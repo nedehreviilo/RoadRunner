@@ -10,8 +10,8 @@
 // =========================================================================
 
 // Wi-Fi access point
-const char* AP_SSID     = "RC-Car-XX";          // Change name to something unique
-const char* AP_PASSWORD = "maskinelement";
+const char* AP_SSID     = "Chaos-Car";          // Change name to something unique
+const char* AP_PASSWORD = "buttplug";
 const int   AP_CHANNEL  = 1;                    // ESP-NOW will inherit this channel
 
 // Motor + servo pins (see the Electronics and Wiring page)
