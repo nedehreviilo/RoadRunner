@@ -11,7 +11,7 @@
 
 // Wi-Fi access point
 const char* AP_SSID     = "Chaos-Car";          // Change name to something unique
-const char* AP_PASSWORD = "buttplug";
+const char* AP_PASSWORD = "helloworld";
 const int   AP_CHANNEL  = 1;                    // ESP-NOW will inherit this channel
 
 // Motor + servo pins (see the Electronics and Wiring page)
@@ -41,8 +41,8 @@ const int SERVO_MIN_US = 500;
 const int SERVO_MAX_US = 2480;
 
 // 3S battery calibration: replace with YOUR two-point readings
-const long ADC_AT_9V   = 1880;                  // raw ADC at 9.0 V
-const long ADC_AT_12V6 = 2630;                  // raw ADC at 12.6 V
+const long ADC_AT_9V   = 2445;                  // raw ADC at 9.0 V
+const long ADC_AT_12V6 = 3710;                  // raw ADC at 12.6 V
 const long LOW_BATTERY_WARN_mV = 9600;          // 3S cutoff (~3.2 V/cell)
 
 // Drivetrain: used to convert motor RPM into vehicle km/h
@@ -97,8 +97,8 @@ uint32_t usToServoDuty(int us) {
 }
 
 void stopMotor() {
-  ledcWrite(RPWM_CHANNEL, 0);
-  ledcWrite(LPWM_CHANNEL, 0);
+  ledcWrite(RPWM_PIN, 0);
+  ledcWrite(LPWM_PIN, 0);
 }
 
 void motorSetup() {
@@ -109,8 +109,8 @@ void motorSetup() {
   ledcAttach(LPWM_PIN, MOTOR_FREQ, MOTOR_RES);
 ledcAttach(RPWM_PIN, MOTOR_FREQ, MOTOR_RES);
 ledcAttach(LPWM_PIN, MOTOR_FREQ, MOTOR_RES);
-  ledcWrite(RPWM_CHANNEL, 0);
-  ledcWrite(LPWM_CHANNEL, 0);
+  ledcWrite(RPWM_PIN, 0);
+  ledcWrite(LPWM_PIN, 0);
 }
 
 void setMotorEnable(bool on) {
@@ -129,16 +129,16 @@ void applyControl(const ControlData& cmd) {
   // Throttle: split sign across RPWM and LPWM
   int t = constrain(cmd.throttle, -255, 255);
   if (t > 0) {
-    ledcWrite(RPWM_CHANNEL, t);
-    ledcWrite(LPWM_CHANNEL, 0);
+    ledcWrite(RPWM_PIN, t);
+    ledcWrite(LPWM_PIN, 0);
   } else {
-    ledcWrite(RPWM_CHANNEL, 0);
-    ledcWrite(LPWM_CHANNEL, -t);
+    ledcWrite(RPWM_PIN, 0);
+    ledcWrite(LPWM_PIN, -t);
   }
   // Steering: map -255..+255 to calibrated pulse width
   int us = map(constrain(cmd.steering, -255, 255), -255, 255,
                SERVO_MIN_US, SERVO_MAX_US);
-  ledcWrite(SERVO_CHANNEL, usToServoDuty(us));
+  ledcWrite(SERVO_PIN, usToServoDuty(us));
 }
 
 // =========================================================================
@@ -263,6 +263,11 @@ void sendTelemetry() {
   float speed   = rpmToKmh(rpm);
   float ir      = readCurrent(R_IS_PIN);
   float il      = readCurrent(L_IS_PIN);
+
+  // Serial output för att se råa ADC-värden för batterispänning, se Serial Monitor
+  Serial.print("1S ADC: ");
+  Serial.print("Raw ADC: ");
+  Serial.println(analogRead(BATT_PIN));
 
   String json = "{";
   json += "\"batt3s_v\":"   + String(batt3s_mv / 1000.0, 2);
