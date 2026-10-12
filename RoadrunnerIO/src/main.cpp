@@ -37,8 +37,8 @@ const int SERVO_RES     = 16;                   // 65 536 ticks per 20 ms
 
 // Servo calibration: replace with YOUR measured end stops
 // Default values should be safe
-const int SERVO_MIN_US = 500;
-const int SERVO_MAX_US = 2480;
+const int SERVO_MIN_US = 250;
+const int SERVO_MAX_US = 1100;
 
 // 3S battery calibration: replace with YOUR two-point readings
 const long ADC_AT_9V   = 2445;                  // raw ADC at 9.0 V
