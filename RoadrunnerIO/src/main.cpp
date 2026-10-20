@@ -256,7 +256,7 @@ float readCurrent(int pin) {
 }
 
 // =========================================================================
-// Telemetry: pushed to all connected web clients every 500 ms
+// Telemetry: pushed to all connected web clients every 500 ms . bilens "instrumentpanel" eller övervakningssystem.
 // =========================================================================
 /* 
 void sendTelemetry() {
@@ -297,7 +297,7 @@ void wifiSetup() {
 }
  */
 // =========================================================================
-// Arduino entry points
+// Arduino entry points "startar igång systemet och kör loopen"
 // =========================================================================
 
 void setup() {
